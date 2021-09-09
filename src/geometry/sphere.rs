@@ -48,3 +48,44 @@ impl Shape for Sphere {
         solution
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::geometry::ray::Ray;
+    use crate::geometry::sphere::Sphere;
+    use crate::geometry::{HitContext, Hittable, Shape};
+    use approx::assert_abs_diff_eq;
+
+    #[test]
+    fn test_intersect_sphere_tangent() {
+        let r = Ray::new([0.0, 1.0, -5.0], [0.0, 0.0, 1.0]);
+        let s = Sphere::default().into_object();
+        let inter = s.intersect(r);
+        let (t, &HitContext { obj_hit, .. }) = inter.hit().unwrap();
+        assert_eq!(inter.size(), 1);
+        assert_abs_diff_eq!(t, 5.0);
+        assert_eq!(obj_hit, &s as &dyn Hittable);
+    }
+
+    #[test]
+    fn test_intersect_sphere_null() {
+        let r = Ray::new([0.0, 2.0, -5.0], [0.0, 0.0, 1.0]);
+        let s = Sphere::default().into_object();
+        let inter = s.intersect(r);
+        assert_eq!(inter.size(), 0);
+        assert_eq!(inter.hit(), None);
+    }
+
+    #[test]
+    fn test_intersect_sphere_center() {
+        let r = Ray::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]);
+        let s = Sphere::default().into_object();
+        let inter = s.intersect(r);
+        let (t, &HitContext { obj_hit, .. }) = inter.hit().unwrap();
+        assert_abs_diff_eq!(t, 1.0);
+        assert_eq!(obj_hit, &s as &dyn Hittable);
+        let (t, &HitContext { obj_hit, .. }) = inter.between(-f32::INFINITY..0.0).next().unwrap();
+        assert_abs_diff_eq!(t, -1.0);
+        assert_eq!(obj_hit, &s as &dyn Hittable);
+    }
+}

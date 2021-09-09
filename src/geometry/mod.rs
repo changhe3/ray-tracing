@@ -70,7 +70,7 @@ impl<S> Hash for Object<S> {
 pub trait Hittable {
     fn id(&self) -> Id;
 
-    fn intersect(&self, ray: Ray) -> Hits;
+    fn intersect(&self, ray: Ray) -> Intersection;
 }
 
 impl<S: Shape> Hittable for Object<S> {
@@ -78,7 +78,7 @@ impl<S: Shape> Hittable for Object<S> {
         self.id
     }
 
-    fn intersect(&self, ray: Ray) -> Hits {
+    fn intersect(&self, ray: Ray) -> Intersection {
         self.shape
             .intersect(ray)
             .into_iter()
@@ -139,11 +139,15 @@ impl Hash for dyn Hittable + '_ {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Hits<'a> {
+pub struct Intersection<'a> {
     inner: BTreeMultiMap<Total<f32>, HitContext<'a>>,
 }
 
-impl<'a> Hits<'a> {
+impl<'a> Intersection<'a> {
+    pub fn size(&self) -> usize {
+        self.inner.len()
+    }
+
     pub fn hit(&self) -> Option<(f32, &HitContext<'a>)> {
         self.inner
             .range(FloatRange::new(0.0..))
@@ -151,7 +155,7 @@ impl<'a> Hits<'a> {
             .next()
     }
 
-    pub fn hits_between<R: RangeBounds<f32>>(
+    pub fn between<R: RangeBounds<f32>>(
         &self,
         range: R,
     ) -> impl Iterator<Item = (f32, &HitContext<'a>)> {
@@ -159,9 +163,13 @@ impl<'a> Hits<'a> {
             .range(FloatRange::new(range))
             .map(|(t, ctx)| (t.into_inner(), ctx))
     }
+
+    pub fn all(&self) -> impl Iterator<Item = (f32, &HitContext<'a>)> {
+        self.inner.iter().map(|(&t, ctx)| (t.into(), ctx))
+    }
 }
 
-impl<'a> FromIterator<(f32, HitContext<'a>)> for Hits<'a> {
+impl<'a> FromIterator<(f32, HitContext<'a>)> for Intersection<'a> {
     fn from_iter<T: IntoIterator<Item = (f32, HitContext<'a>)>>(iter: T) -> Self {
         let inner = iter.into_iter().map(|(t, ctx)| (t.into(), ctx)).collect();
         Self { inner }
